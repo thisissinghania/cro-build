@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #111111;
+  --primary: #4f39f6;
+  /* Blue/Indigo from image */
+  --primary-foreground: #ffffff;
+  --secondary: #F3F4F6;
+  /* Gray-100 */
+  --secondary-foreground: #1F2937;
+  /* Gray-800 */
+  --black: #000000;
+  --white: #ffffff;
+
+  /* Consistent Subtle Curve */
+  --radius: 8px;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-black: var(--black);
+  --color-white: var(--white);
+
+  /* Overriding default radius utilities to enforce consistency and prevent full radius */
+  --radius-sm: var(--radius);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+  --radius-2xl: var(--radius);
+  --radius-3xl: var(--radius);
+  --radius-full: var(--radius);
+  /* Prevent full border radius anywhere */
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  /* Ensure paragraphs are exactly 16px */
+  p {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+}
+
+@layer components {
+
+  /* Consistent Badge */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 font-medium bg-secondary text-secondary-foreground;
+    font-size: 14px;
+    /* Exactly 14px */
+    border-radius: var(--radius);
+  }
+
+  /* Consistent Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 font-medium transition-colors;
+    font-size: 16px;
+    /* Exactly 16px */
+    border-radius: var(--radius);
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:opacity-90;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-gray-200;
+  }
+}
+
+/* Custom sleek scrollbar for sidebar and specific elements */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
