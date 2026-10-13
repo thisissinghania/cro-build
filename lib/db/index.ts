@@ -19,7 +19,7 @@ if (globalForPrisma.prisma) {
   if (!(globalForPrisma.prisma as any).auditReport || !hasNotificationsReadAt) {
     try {
       (globalForPrisma.prisma as any).$disconnect?.();
-    } catch {}
+    } catch { }
     globalForPrisma.prisma = undefined;
   }
 }

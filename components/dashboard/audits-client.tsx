@@ -97,16 +97,28 @@ export function AuditsClient({ role = "USER" }: { role?: string }) {
 
   const getCategoryLabel = (category: string) => {
     switch (category) {
-      case "UI_UX":
-        return "UI & UX Friction";
+      case "AEO_SEO":
+      case "SEO":
+      case "AEO":
+        return "AEO & AI Search";
+      case "FUNNEL_LEAKAGE":
       case "CHECKOUT":
-        return "Checkout Drop-off";
-      case "SPEED":
-        return "Speed & Loading";
-      case "PRICING":
-        return "Pricing & Bundles";
+        return "Funnel Leakage";
+      case "DESIGN_ERA":
+      case "UI_UX":
+      case "AESTHETICS":
+        return "2026 UX Standards";
+      case "TRUST_CREDIBILITY":
       case "COPYWRITING":
-        return "Copy & Trust";
+      case "TRUST":
+        return "Trust & Social Proof";
+      case "MARKETING_PSYCHOLOGY":
+      case "PRICING":
+      case "AOV":
+        return "Marketing & AOV";
+      case "SPEED_TECH":
+      case "SPEED":
+        return "Speed & Tech";
       default:
         return category;
     }
@@ -305,8 +317,8 @@ export function AuditsClient({ role = "USER" }: { role?: string }) {
 
                       {/* Status */}
                       <td className="px-6 py-4 align-middle">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-                          <CheckCircle2 className="w-4 h-4" />
+                        <span className="inline-flex items-center gap-1.5 h-[30px] px-2.5 rounded-md text-[14px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100 whitespace-nowrap">
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
                           Completed
                         </span>
                       </td>
