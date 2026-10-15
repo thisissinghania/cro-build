@@ -180,17 +180,17 @@ export function UsersClient({ initialUsers, totalUsersCount }: UserClientProps) 
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-zinc-100 text-sm text-zinc-500 font-medium">
-                <th className="px-6 py-4">Name</th>
-                <th className="px-6 py-4">Email</th>
-                <th className="px-6 py-4">Joined On</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="p-3.5">Name</th>
+                <th className="p-3.5">Email</th>
+                <th className="p-3.5">Joined On</th>
+                <th className="p-3.5">Status</th>
+                <th className="p-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-sm text-zinc-500">
+                  <td colSpan={5} className="p-3.5 py-8 text-center text-sm text-zinc-500">
                     No users found.
                   </td>
                 </tr>
@@ -309,7 +309,7 @@ function UserRow({ user, onUpdate, onDelete }: { user: any, onUpdate: (u: any) =
 
   return (
     <tr className="hover:bg-zinc-50 transition-colors group">
-      <td className="px-6 py-4">
+      <td className="p-3.5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0 border border-indigo-100">
             <Users className="w-5 h-5" />
@@ -317,17 +317,17 @@ function UserRow({ user, onUpdate, onDelete }: { user: any, onUpdate: (u: any) =
           <div className="text-sm font-medium text-zinc-900">{user.name || "N/A"}</div>
         </div>
       </td>
-      <td className="px-6 py-4">
+      <td className="p-3.5">
         <div className="text-sm font-medium text-zinc-900">
           {user.email}
         </div>
       </td>
-      <td className="px-6 py-4">
+      <td className="p-3.5">
         <div className="text-sm font-medium text-zinc-900">
           {new Date(user.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "numeric" })}
         </div>
       </td>
-      <td className="px-6 py-4">
+      <td className="p-3.5">
         <button
           disabled={isPending}
           onClick={handleToggleStatus}
@@ -347,7 +347,7 @@ function UserRow({ user, onUpdate, onDelete }: { user: any, onUpdate: (u: any) =
           </span>
         </button>
       </td>
-      <td className="px-6 py-4 text-right">
+      <td className="p-3.5 text-right">
         <div className="flex items-center justify-end gap-2">
           <button onClick={() => setIsDrawerOpen(true)} className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors cursor-pointer" title="View">
             <Eye className="w-4 h-4" />

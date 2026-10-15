@@ -248,25 +248,25 @@ export function AuditsClient({ role = "USER" }: { role?: string }) {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-zinc-100 text-sm text-zinc-500 font-medium bg-zinc-50/50">
-                <th className="px-6 py-4">Audit Report</th>
-                <th className="px-6 py-4">Website / Link</th>
-                {role === "ADMIN" && <th className="px-6 py-4">Requested By</th>}
-                <th className="px-6 py-4">Date &amp; Time</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="p-3.5">Audit Report</th>
+                <th className="p-3.5">Website / Link</th>
+                {role === "ADMIN" && <th className="p-3.5">Requested By</th>}
+                <th className="p-3.5">Date &amp; Time</th>
+                <th className="p-3.5">Status</th>
+                <th className="p-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan={role === "ADMIN" ? 6 : 5} className="px-6 py-12 text-center text-zinc-500">
+                  <td colSpan={role === "ADMIN" ? 6 : 5} className="p-3.5 py-12 text-center text-zinc-500">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
                     Loading audits...
                   </td>
                 </tr>
               ) : audits.length === 0 ? (
                 <tr>
-                  <td colSpan={role === "ADMIN" ? 6 : 5} className="px-6 py-12 text-center text-zinc-500">
+                  <td colSpan={role === "ADMIN" ? 6 : 5} className="p-3.5 py-12 text-center text-zinc-500">
                     No AI audits found. Go to Integrations and run an audit on your website.
                   </td>
                 </tr>
@@ -276,7 +276,7 @@ export function AuditsClient({ role = "USER" }: { role?: string }) {
                   return (
                     <tr key={audit.id} className="hover:bg-zinc-50/60 transition-colors group">
                       {/* Audit Report Title & Score */}
-                      <td className="px-6 py-4 align-middle">
+                      <td className="p-3.5 align-middle">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0 border border-indigo-100">
                             <FileText className="w-5 h-5" />
@@ -293,7 +293,7 @@ export function AuditsClient({ role = "USER" }: { role?: string }) {
                       </td>
 
                       {/* Website Domain */}
-                      <td className="px-6 py-4 align-middle">
+                      <td className="p-3.5 align-middle">
                         <div className="flex items-center gap-2 text-zinc-900 font-medium">
                           <Globe className="w-4 h-4 text-zinc-400" />
                           <span>{audit.websiteUrl}</span>
@@ -302,7 +302,7 @@ export function AuditsClient({ role = "USER" }: { role?: string }) {
 
                       {/* Requested By (ADMIN ONLY) */}
                       {role === "ADMIN" && (
-                        <td className="px-6 py-4 align-middle">
+                        <td className="p-3.5 align-middle">
                           <div>
                             <div className="font-medium text-zinc-900">{audit.user?.name || "Unknown"}</div>
                             <div className="text-xs text-zinc-500 mt-0.5">{audit.user?.email || "No email"}</div>
@@ -311,12 +311,12 @@ export function AuditsClient({ role = "USER" }: { role?: string }) {
                       )}
 
                       {/* Date & Time */}
-                      <td className="px-6 py-4 align-middle text-zinc-600 whitespace-nowrap" suppressHydrationWarning>
+                      <td className="p-3.5 align-middle text-zinc-600 whitespace-nowrap" suppressHydrationWarning>
                         {formatDate(audit.createdAt)}
                       </td>
 
                       {/* Status */}
-                      <td className="px-6 py-4 align-middle">
+                      <td className="p-3.5 align-middle">
                         <span className="inline-flex items-center gap-1.5 h-[30px] px-2.5 rounded-md text-[14px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100 whitespace-nowrap">
                           <CheckCircle2 className="w-4 h-4 shrink-0" />
                           Completed
@@ -324,7 +324,7 @@ export function AuditsClient({ role = "USER" }: { role?: string }) {
                       </td>
 
                       {/* Action Buttons */}
-                      <td className="px-6 py-4 align-middle text-right">
+                      <td className="p-3.5 align-middle text-right">
                         <div className="flex items-center justify-end gap-2">
                           {/* View Audit */}
                           <button

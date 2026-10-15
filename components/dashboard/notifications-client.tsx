@@ -259,17 +259,17 @@ export function NotificationsClient({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-zinc-100 text-sm text-zinc-500 font-medium bg-zinc-50/50">
-                <th className="px-6 py-4">Event Type</th>
-                <th className="px-6 py-4">Notification Details</th>
-                <th className="px-6 py-4">Target Website</th>
-                <th className="px-6 py-4">Date &amp; Time</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="p-3.5">Event Type</th>
+                <th className="p-3.5">Notification Details</th>
+                <th className="p-3.5">Target Website</th>
+                <th className="p-3.5">Date &amp; Time</th>
+                <th className="p-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-zinc-500">
+                  <td colSpan={5} className="p-3.5 py-12 text-center text-zinc-500">
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-4 h-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
                       <span>Loading notifications...</span>
@@ -278,7 +278,7 @@ export function NotificationsClient({
                 </tr>
               ) : notifications.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-zinc-500">
+                  <td colSpan={5} className="p-3.5 py-12 text-center text-zinc-500">
                     <Bell className="w-8 h-8 text-zinc-300 mx-auto mb-2" />
                     <p className="text-base font-semibold text-zinc-800 mb-1">No notifications found</p>
                     <p className="text-sm text-zinc-400">
@@ -292,7 +292,7 @@ export function NotificationsClient({
                 notifications.map((item) => (
                   <tr key={item.id} className="hover:bg-zinc-50/80 transition-colors">
                     {/* Event Type */}
-                    <td className="px-6 py-4 align-middle whitespace-nowrap">
+                    <td className="p-3.5 align-middle whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <div
                           className={`p-2 rounded-lg shrink-0 ${
@@ -326,7 +326,7 @@ export function NotificationsClient({
                     </td>
 
                     {/* Details */}
-                    <td className="px-6 py-4 align-middle max-w-md">
+                    <td className="p-3.5 align-middle max-w-md">
                       <div className="flex items-center gap-1.5 mb-0.5">
                         <p className="font-semibold text-zinc-900 leading-snug">{item.title}</p>
                         {!item.read && (
@@ -337,7 +337,7 @@ export function NotificationsClient({
                     </td>
 
                     {/* Target Website */}
-                    <td className="px-6 py-4 align-middle whitespace-nowrap">
+                    <td className="p-3.5 align-middle whitespace-nowrap">
                       <div className="flex items-center gap-2 text-zinc-900 font-medium">
                         <Globe className="w-4 h-4 text-zinc-400 shrink-0" />
                         <span>{item.target}</span>
@@ -345,12 +345,12 @@ export function NotificationsClient({
                     </td>
 
                     {/* Date & Time */}
-                    <td className="px-6 py-4 align-middle text-zinc-600 whitespace-nowrap" suppressHydrationWarning>
+                    <td className="p-3.5 align-middle text-zinc-600 whitespace-nowrap" suppressHydrationWarning>
                       {formatDate(item.date)}
                     </td>
 
                     {/* Action */}
-                    <td className="px-6 py-4 align-middle text-right whitespace-nowrap">
+                    <td className="p-3.5 align-middle text-right whitespace-nowrap">
                       <div className="flex items-center justify-end">
                         <Link
                           href={item.url}

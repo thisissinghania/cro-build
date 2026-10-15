@@ -32,7 +32,10 @@ export async function GET(
     return NextResponse.json({ error: "Report not found or access denied." }, { status: 404 });
   }
 
-  const recommendations = (auditReport.recommendations as any[]) || [];
+  const rawRecs = auditReport.recommendations as any;
+  const recommendations: any[] = Array.isArray(rawRecs)
+    ? rawRecs
+    : (rawRecs?.items || rawRecs?.recommendations || []);
 
   // Format data for Excel worksheet
   const rows = recommendations.map((rec, index) => ({

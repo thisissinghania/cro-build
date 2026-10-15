@@ -39,10 +39,48 @@ export const PageFocusBreakdownSchema = z.object({
   checkout: z.number().default(10),
 });
 
+export const HeadlineVariantSchema = z.object({
+  id: z.string().default("var_a"),
+  type: z.string().default("Loss Aversion"),
+  headline: z.string().min(1),
+  subheadline: z.string().min(1),
+  psychology: z.string().min(1),
+  impact: z.string().min(1),
+});
+
+export const FunnelStageSchema = z.object({
+  stage: z.string().min(1),
+  pct: z.number().default(25),
+  reason: z.string().min(1),
+  fix: z.string().min(1),
+  urgency: z.enum(["HIGH", "MEDIUM", "LOW"]).default("HIGH"),
+});
+
+export const CompetitorBenchmarkSchema = z.object({
+  competitorNiche: z.string().default("Industry Competitors"),
+  competitorScore: z.number().default(88),
+  metrics: z.array(
+    z.object({
+      name: z.string(),
+      target: z.boolean(),
+      competitor: z.boolean(),
+      verdict: z.string(),
+    })
+  ).optional().default([]),
+  advantages: z.array(z.string()).optional().default([]),
+  vulnerabilities: z.array(z.string()).optional().default([]),
+  winningMoves: z.array(z.string()).optional().default([]),
+});
+
 export const AuditReportDataSchema = z.object({
   overallScore: z.number().min(0).max(100),
   estimatedRevenueLoss: z.string().min(1),
   summary: z.string().min(1),
+  websiteType: z
+    .enum(["LOCAL_SERVICE", "ECOMMERCE", "SAAS_B2B", "AGENCY_PORTFOLIO", "GENERAL_WEBSITE"])
+    .optional()
+    .default("GENERAL_WEBSITE"),
+  businessNiche: z.string().optional().default("General Website"),
   // 2026 Growth & Intelligence Diagnostics
   designEraDiagnosis: z.string().optional().default("2017-2019 Template Feel (Needs 2026 Modernization)"),
   aeoReadinessScore: z.number().min(0).max(100).optional().default(42),
@@ -59,8 +97,15 @@ export const AuditReportDataSchema = z.object({
     "Lack of authentic customer video reviews or creator social proof",
     "Hidden shipping or return shipping policies causing cart hesitation",
   ]),
+  generatedHeadlines: z.array(HeadlineVariantSchema).optional().default([]),
+  generatedSchemaJsonLd: z.string().optional().default(""),
+  generatedFunnelStages: z.array(FunnelStageSchema).optional().default([]),
+  competitorBenchmark: CompetitorBenchmarkSchema.optional(),
   recommendations: z.array(AuditRecommendationSchema).min(1),
 });
 
 export type AuditRecommendation = z.infer<typeof AuditRecommendationSchema>;
 export type AuditReportData = z.infer<typeof AuditReportDataSchema>;
+export type HeadlineVariant = z.infer<typeof HeadlineVariantSchema>;
+export type FunnelStage = z.infer<typeof FunnelStageSchema>;
+export type CompetitorBenchmark = z.infer<typeof CompetitorBenchmarkSchema>;

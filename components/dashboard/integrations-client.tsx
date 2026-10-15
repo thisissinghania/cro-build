@@ -474,25 +474,25 @@ export function IntegrationsClient({
                   <table className="w-full text-sm text-left">
                     <thead className="bg-zinc-50/50 border-b border-zinc-100 text-zinc-500 font-medium">
                       <tr>
-                        <th className="px-6 py-4">Website / Link</th>
-                        <th className="px-6 py-4">{role === "ADMIN" ? "Integration Type" : "Platform"}</th>
-                        {role === "ADMIN" && <th className="px-6 py-4">User</th>}
-                        <th className="px-6 py-4">Connected On</th>
-                        {role === "ADMIN" && <th className="px-6 py-4 text-center">Audits Generated</th>}
-                        {role === "USER" && <th className="px-6 py-4 text-right">Actions</th>}
+                        <th className="p-3.5">Website / Link</th>
+                        <th className="p-3.5">{role === "ADMIN" ? "Integration Type" : "Platform"}</th>
+                        {role === "ADMIN" && <th className="p-3.5">User</th>}
+                        <th className="p-3.5">Connected On</th>
+                        {role === "ADMIN" && <th className="p-3.5 text-center">Audits Generated</th>}
+                        {role === "USER" && <th className="p-3.5 text-right">Actions</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100">
                       {loading ? (
                         <tr>
-                          <td colSpan={role === "ADMIN" ? 5 : 4} className="px-6 py-12 text-center text-zinc-500">
+                          <td colSpan={role === "ADMIN" ? 5 : 4} className="p-3.5 py-12 text-center text-zinc-500">
                             <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
                             Loading integrations...
                           </td>
                         </tr>
                       ) : integrations.length === 0 ? (
                         <tr>
-                          <td colSpan={role === "ADMIN" ? 5 : 4} className="px-6 py-12 text-center text-zinc-500">
+                          <td colSpan={role === "ADMIN" ? 5 : 4} className="p-3.5 py-12 text-center text-zinc-500">
                             No integrations found. Connect a platform or analyze a URL to get started.
                           </td>
                         </tr>
@@ -503,7 +503,7 @@ export function IntegrationsClient({
 
                           return (
                             <tr key={integration.id} className="hover:bg-zinc-50/60 transition-colors group">
-                              <td className="px-6 py-4 align-middle">
+                              <td className="p-3.5 align-middle">
                                 <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 rounded-md bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0">
                                     <Globe className="w-4 h-4" />
@@ -511,29 +511,29 @@ export function IntegrationsClient({
                                   <span className="font-medium text-zinc-900">{integration.websiteUrl}</span>
                                 </div>
                               </td>
-                              <td className="px-6 py-4 align-middle">
+                              <td className="p-3.5 align-middle">
                                 {getPlatformBadge(integration.platformType)}
                               </td>
                               {role === "ADMIN" && (
-                                <td className="px-6 py-4 align-middle">
+                                <td className="p-3.5 align-middle">
                                   <div className="flex flex-col">
                                     <span className="text-sm font-medium text-zinc-900">{integration.user?.name || "Unknown"}</span>
                                     <span className="text-xs text-zinc-500">{integration.user?.email || "No email"}</span>
                                   </div>
                                 </td>
                               )}
-                              <td className="px-6 py-4 align-middle text-zinc-500 whitespace-nowrap">
+                              <td className="p-3.5 align-middle text-zinc-500 whitespace-nowrap">
                                 {formatDate(integration.createdAt)}
                               </td>
                               {role === "ADMIN" && (
-                                <td className="px-6 py-4 align-middle text-center">
+                                <td className="p-3.5 align-middle text-center">
                                   <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-700 font-bold text-xs border border-zinc-200">
                                     {integration.auditsGenerated || 0}
                                   </span>
                                 </td>
                               )}
                               {role === "USER" && (
-                                <td className="px-6 py-4 align-middle text-right">
+                                <td className="p-3.5 align-middle text-right">
                                   {integration.auditsGenerated === 0 ? (
                                     <button
                                       onClick={() => handleRunAnalysis(integration.id)}
