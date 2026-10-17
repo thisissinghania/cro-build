@@ -407,7 +407,7 @@ export function CompetitorBenchmarkTab({
           </div>
 
           <div className="p-4 sm:p-5 bg-white rounded-xl border border-indigo-200/70 shadow-[0_8px_30px_rgb(0,0,0,0.06)] flex flex-col items-center justify-center min-w-[200px] sm:min-w-[220px] shrink-0">
-            <span className="text-xs uppercase font-bold text-zinc-400 mb-1 tracking-wider">
+            <span className="text-xs uppercase font-bold text-zinc-400 mb-1">
               Competitive Gap
             </span>
             <div className="flex items-baseline gap-1 my-0.5">

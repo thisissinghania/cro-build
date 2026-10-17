@@ -9,6 +9,7 @@ import {
   getLatestAuditReportAction
 } from "@/actions/integrations";
 import { useDebounce } from "@/lib/hooks/use-debounce";
+import { toast } from "sonner";
 import { AuditReportView } from "./audit-report-view";
 import {
   Search,
@@ -136,8 +137,9 @@ export function IntegrationsClient({
     const result = await runAnalysisAction(integrationId);
     setAnalyzingId(null);
     if (result?.error) {
-      alert(result.error);
+      toast.error(result.error);
     } else if (result?.success) {
+      toast.success("AI CRO audit generated successfully!");
       if (result.auditReport) {
         setLatestReport(result.auditReport);
       } else {

@@ -200,7 +200,7 @@ export function RevenueLeakageTab({
           </div>
 
           <div className="p-4 sm:p-5 bg-white rounded-xl border border-rose-200/70 shadow-[0_8px_30px_rgb(0,0,0,0.06)] flex flex-col items-center justify-center min-w-[200px] sm:min-w-[220px] shrink-0">
-            <span className="text-xs uppercase font-bold text-zinc-400 mb-1 tracking-wider">
+            <span className="text-xs uppercase font-bold text-zinc-400 mb-1">
               Monthly Loss
             </span>
             <span className="text-3xl sm:text-4xl font-bold text-rose-600 tracking-tight my-0.5">
@@ -218,7 +218,7 @@ export function RevenueLeakageTab({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
           {/* Column 1: Current Run-Rate */}
           <div className="flex flex-col">
-            <span className="text-xs uppercase font-bold text-zinc-500 mb-1 tracking-wider">
+            <span className="text-xs uppercase font-bold text-zinc-500 mb-1">
               Current Monthly Run-Rate
             </span>
             <div className="text-2xl sm:text-3xl font-bold text-zinc-800 my-0.5">
@@ -231,7 +231,7 @@ export function RevenueLeakageTab({
 
           {/* Column 2: Optimized Run-Rate */}
           <div className="flex flex-col border-t sm:border-t-0 sm:border-l border-indigo-200/60 sm:pl-5 pt-3 sm:pt-0">
-            <span className="text-xs uppercase font-bold text-indigo-700 mb-1 tracking-wider">
+            <span className="text-xs uppercase font-bold text-indigo-700 mb-1">
               Optimized Target Run-Rate
             </span>
             <div className="text-2xl sm:text-3xl font-bold text-indigo-700 my-0.5">
@@ -244,7 +244,7 @@ export function RevenueLeakageTab({
 
           {/* Column 3: Projected Profit Recovered */}
           <div className="flex flex-col border-t sm:border-t-0 sm:border-l border-emerald-200/60 sm:pl-5 pt-3 sm:pt-0">
-            <span className="text-xs uppercase font-bold text-emerald-800 mb-1 tracking-wider">
+            <span className="text-xs uppercase font-bold text-emerald-800 mb-1">
               Projected Monthly Profit Recovered
             </span>
             <div className="text-2xl sm:text-3xl font-bold text-emerald-600 my-0.5 flex items-baseline gap-1">

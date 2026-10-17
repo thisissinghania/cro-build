@@ -19,6 +19,7 @@ interface RecommendationCardProps {
   index?: number;
   copiedId?: string | null;
   onCopy?: (snippet: string, id: string) => void;
+  noShadow?: boolean;
 }
 
 export function RecommendationCard({
@@ -26,6 +27,7 @@ export function RecommendationCard({
   index = 0,
   copiedId,
   onCopy,
+  noShadow = false,
 }: RecommendationCardProps) {
   const [internalCopied, setInternalCopied] = useState(false);
 
@@ -72,7 +74,11 @@ export function RecommendationCard({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-zinc-200/60 p-4 sm:p-5 space-y-4 shadow-[0_4px_20px_rgb(0,0,0,0.03)]">
+    <div
+      className={`bg-white rounded-xl border border-zinc-200/60 p-4 sm:p-5 space-y-4 ${
+        noShadow ? "" : "shadow-[0_4px_20px_rgb(0,0,0,0.03)]"
+      }`}
+    >
       {/* Top Badge Row */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">

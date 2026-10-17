@@ -373,18 +373,18 @@ export async function crawlAndAuditWebsite(rawUrl: string): Promise<ScrapedSiteA
     const fallbackType: DetectedWebsiteType = isLocalService
       ? "LOCAL_SERVICE"
       : isEcommerce
-      ? "ECOMMERCE"
-      : isSaas
-      ? "SAAS_B2B"
-      : "GENERAL_WEBSITE";
+        ? "ECOMMERCE"
+        : isSaas
+          ? "SAAS_B2B"
+          : "GENERAL_WEBSITE";
 
     const fallbackNiche = isLocalService
       ? "Local Service & Trade Specialist (Goal: Inbound Phone Calls & Lead Inquiries)"
       : isEcommerce
-      ? "E-Commerce & DTC Brand (Goal: Cart Checkout, ROAS & AOV Increase)"
-      : isSaas
-      ? "SaaS & Web Software Platform (Goal: Free Trials & Subscription Conversion)"
-      : "Digital Business / Web Presence (Goal: Engagement & Conversion)";
+        ? "E-Commerce & DTC Brand (Goal: Cart Checkout, ROAS & AOV Increase)"
+        : isSaas
+          ? "SaaS & Web Software Platform (Goal: Free Trials & Subscription Conversion)"
+          : "Digital Business / Web Presence (Goal: Engagement & Conversion)";
 
     return {
       normalizedUrl: origin,

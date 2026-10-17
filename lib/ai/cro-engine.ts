@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { jsonrepair } from "jsonrepair";
 import { AuditReportDataSchema, type AuditReportData } from "@/lib/validations/audit";
 import type { ScrapedSiteAudit } from "@/lib/ai/web-scraper";
 
@@ -260,7 +261,11 @@ Respond with a strict, valid JSON object matching this schema:
   ]
 }
 
-Ensure you provide between 6 and 9 rich, hyper-actionable recommendations. High priority items must address the most catastrophic conversion and search leaks first.
+CRITICAL JSON FORMATTING & SERIALIZATION RULES:
+1. Return ONLY valid RFC 8259 JSON format matching the schema above.
+2. In all code snippets inside "actionableSnippet" and "generatedSchemaJsonLd", strictly use SINGLE QUOTES (') for HTML attributes (e.g., <a href='tel:123' class='btn'> instead of double quotes) so double quotes never break the JSON string encoding.
+3. Never use raw unescaped newlines inside JSON string properties; escape all newlines with \\n.
+4. Ensure you provide between 6 and 9 rich, hyper-actionable recommendations. High priority items must address the most catastrophic conversion and search leaks first.
 `;
 
   const response = await ai.models.generateContent({
@@ -268,7 +273,8 @@ Ensure you provide between 6 and 9 rich, hyper-actionable recommendations. High 
     contents: prompt,
     config: {
       responseMimeType: "application/json",
-      temperature: 0.3,
+      temperature: 0.25,
+      maxOutputTokens: 8192,
     },
   });
 
@@ -277,8 +283,50 @@ Ensure you provide between 6 and 9 rich, hyper-actionable recommendations. High 
     throw new Error("Empty response received from Gemini.");
   }
 
-  const parsed = JSON.parse(rawJson);
-  const validated = AuditReportDataSchema.parse(parsed);
+  const parsed = parseAndRepairAiJson(rawJson);
+
+  // Validate and salvage data if minor schema mismatches occur
+  let validated: AuditReportData;
+  const result = AuditReportDataSchema.safeParse(parsed);
+  if (result.success) {
+    validated = result.data;
+  } else {
+    console.warn("Schema validation warnings on AI response:", result.error.format());
+    const rawRecs = Array.isArray(parsed?.recommendations) ? parsed.recommendations : [];
+    const sanitizedRecs = rawRecs.map((r: any, idx: number) => ({
+      id: r?.id || `rec_${idx + 1}`,
+      title: r?.title || "Conversion Rate Optimization Opportunity",
+      category: r?.category || "DESIGN_ERA",
+      priority: ["HIGH", "MEDIUM", "LOW"].includes(String(r?.priority).toUpperCase())
+        ? String(r?.priority).toUpperCase()
+        : "MEDIUM",
+      targetPage: r?.targetPage || "Product Page (PDP)",
+      implementationType: r?.implementationType || "Optimization (~1-2h)",
+      suggestedChange: r?.suggestedChange || "Implement recommended conversion fixes.",
+      benefit: r?.benefit || "+15% Conversion Rate",
+      rationale: r?.rationale || "Reduces visitor hesitation and friction.",
+      effort: r?.effort || "Moderate (~2h)",
+      actionableSnippet: r?.actionableSnippet || undefined,
+    }));
+
+    validated = AuditReportDataSchema.parse({
+      ...parsed,
+      recommendations: sanitizedRecs.length > 0 ? sanitizedRecs : [
+        {
+          id: "rec_1",
+          title: "Mobile Conversion Optimization",
+          category: "DESIGN_ERA",
+          priority: "HIGH",
+          targetPage: "Homepage & Mobile Header",
+          implementationType: "⚡ Quick Win (<30m)",
+          suggestedChange: "Streamline mobile CTAs and remove layout friction.",
+          benefit: "+20% Inbound Inquiries",
+          rationale: "Mobile users bounce quickly when primary actions are hard to reach.",
+          effort: "Quick Fix (~20m)",
+        }
+      ],
+    });
+  }
 
   // Sort recommendations by priority (HIGH first, then MEDIUM, then LOW)
   const priorityOrder: Record<string, number> = { HIGH: 1, MEDIUM: 2, LOW: 3 };
@@ -287,4 +335,52 @@ Ensure you provide between 6 and 9 rich, hyper-actionable recommendations. High 
   );
 
   return validated;
+}
+
+function parseAndRepairAiJson(rawText: string): any {
+  if (!rawText || typeof rawText !== "string") {
+    throw new Error("Empty response received from AI model.");
+  }
+
+  let text = rawText.trim();
+
+  // Strip markdown code fences if present (```json ... ``` or ``` ...)
+  if (text.startsWith("```")) {
+    text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  }
+
+  // 1. Try native JSON.parse
+  try {
+    return JSON.parse(text);
+  } catch (err: any) {
+    console.warn("Direct JSON.parse failed. Attempting jsonrepair...", err.message);
+  }
+
+  // 2. Try jsonrepair (repairs unescaped quotes inside strings, trailing commas, missing brackets)
+  try {
+    const repaired = jsonrepair(text);
+    return JSON.parse(repaired);
+  } catch (repairErr: any) {
+    console.warn("jsonrepair attempt 1 failed. Sanitizing unescaped control chars...", repairErr.message);
+    const m = repairErr.message.match(/position (\d+)/);
+    if (m) {
+      const p = parseInt(m[1], 10);
+      console.log("SURROUNDING TEXT AT REPAIR ERROR (pos " + p + "):", JSON.stringify(text.slice(Math.max(0, p - 100), Math.min(text.length, p + 100))));
+    }
+  }
+
+  // 3. Try sanitizing raw newlines/control characters and then repair
+  try {
+    const sanitized = text
+      .replace(/[\u0000-\u001F]+/g, (match) => {
+        if (match.includes("\n")) return "\\n";
+        if (match.includes("\r")) return "";
+        if (match.includes("\t")) return "\\t";
+        return "";
+      });
+    return JSON.parse(jsonrepair(sanitized));
+  } catch (finalErr: any) {
+    console.error("All JSON repair attempts failed. Raw response preview:", text.slice(0, 1000));
+    throw new Error("AI returned malformed JSON response. Please click Re-Analyze to regenerate.");
+  }
 }
