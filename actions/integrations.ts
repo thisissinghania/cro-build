@@ -4,7 +4,9 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { generateCroAuditWithAI } from "@/lib/ai/cro-engine";
-import { crawlAndAuditWebsite } from "@/lib/ai/web-scraper";
+import { crawlAndAuditWebsite, isSafePublicUrl } from "@/lib/ai/web-scraper";
+import { CreateIntegrationSchema, extractCanonicalDomain } from "@/lib/validations/integration";
+import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
 
 export async function getIntegrationsAction(payload: {
   skip: number;
@@ -95,25 +97,97 @@ export async function createIntegrationAction(payload: {
   }
 
   try {
-    // Validate simple URL format
-    if (!payload.websiteUrl || payload.websiteUrl.length < 3) {
-      return { error: "Please enter a valid URL or store name." };
+    // Strict Zod Validation
+    const validation = CreateIntegrationSchema.safeParse(payload);
+    if (!validation.success) {
+      const firstIssue = validation.error.issues[0]?.message || "Please enter a valid website URL.";
+      return { error: firstIssue };
     }
 
-    const newIntegration = await prisma.integration.create({
-      data: {
-        userId: session.user.id,
-        websiteUrl: payload.websiteUrl,
-        platformType: payload.platformType,
-        status: payload.platformType === "CUSTOM_URL" ? "ACTIVE" : "SYNCING",
-      },
+    const cleanUrl = payload.websiteUrl.trim();
+    const targetCanonical = extractCanonicalDomain(cleanUrl);
+
+    // Prevent duplicate website connection for this user (tenant isolated)
+    // Uses a transaction to guarantee atomicity and prevent concurrent double-click race conditions
+    const newIntegration = await prisma.$transaction(async (tx) => {
+      const existingUserIntegrations = await tx.integration.findMany({
+        where: {
+          userId: session.user.id,
+        },
+        select: {
+          id: true,
+          websiteUrl: true,
+        },
+      });
+
+      const isDuplicate = existingUserIntegrations.some(
+        (item) => extractCanonicalDomain(item.websiteUrl) === targetCanonical
+      );
+
+      if (isDuplicate) {
+        throw new Error("ALREADY_CONNECTED");
+      }
+
+      return tx.integration.create({
+        data: {
+          userId: session.user.id,
+          websiteUrl: cleanUrl,
+          platformType: payload.platformType,
+          status: "ACTIVE",
+          ga4Connected: payload.platformType === "GA4",
+        },
+      });
     });
 
     revalidatePath("/dashboard/integrations");
+    revalidatePath("/dashboard/audits");
     return { success: true, data: newIntegration };
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message === "ALREADY_CONNECTED") {
+      return { error: "You have already connected this website to your account." };
+    }
     console.error("Error creating integration:", error);
-    return { error: "Failed to connect integration." };
+    return { error: sanitizeErrorMessage(error, "Failed to connect integration. Please try again.") };
+  }
+}
+
+export async function deleteIntegrationAction(integrationId: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { error: "Unauthorized" };
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { isActive: true, role: true },
+  });
+
+  if (!dbUser?.isActive) {
+    return { error: "User account is inactive." };
+  }
+
+  const targetIntegration = await prisma.integration.findFirst({
+    where: {
+      id: integrationId,
+      ...(dbUser.role !== "ADMIN" ? { userId: session.user.id } : {}),
+    },
+  });
+
+  if (!targetIntegration) {
+    return { error: "Integration not found or access denied." };
+  }
+
+  try {
+    await prisma.integration.delete({
+      where: { id: integrationId },
+    });
+
+    revalidatePath("/dashboard/integrations");
+    revalidatePath("/dashboard/audits");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error deleting integration:", error);
+    return { error: sanitizeErrorMessage(error, "Unable to disconnect website. Please try again.") };
   }
 }
 
@@ -125,18 +199,18 @@ export async function runAnalysisAction(integrationId: string) {
 
   const dbUser = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { isActive: true },
+    select: { isActive: true, role: true },
   });
 
   if (!dbUser?.isActive) {
     return { error: "User account is inactive." };
   }
 
-  // IDOR & tenant isolation: Verify the integration belongs to this user
+  // IDOR & tenant isolation: Verify the integration belongs to this user (unless ADMIN)
   const targetIntegration = await prisma.integration.findFirst({
     where: {
       id: integrationId,
-      userId: session.user.id,
+      ...(dbUser.role !== "ADMIN" ? { userId: session.user.id } : {}),
     },
   });
 
@@ -144,7 +218,60 @@ export async function runAnalysisAction(integrationId: string) {
     return { error: "Integration not found or access denied." };
   }
 
+  // Guard against unconfigured or mock GA4 rows to avoid quota burn and AI hallucination
+  if (targetIntegration.platformType === "GA4" && !isSafePublicUrl(targetIntegration.websiteUrl)) {
+    return {
+      error: "Please configure a valid public website domain for this GA4 integration before running an AI audit.",
+    };
+  }
+
+  // Enforce Daily Limit: 3 audits per day for standard USER role
+  if (dbUser.role !== "ADMIN") {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const [usageLogsCount, auditReportsCount] = await Promise.all([
+      prisma.auditUsageLog.count({
+        where: {
+          userId: session.user.id,
+          createdAt: {
+            gte: startOfDay,
+          },
+        },
+      }),
+      prisma.auditReport.count({
+        where: {
+          userId: session.user.id,
+          createdAt: {
+            gte: startOfDay,
+          },
+        },
+      }),
+    ]);
+
+    const auditsCountToday = Math.max(usageLogsCount, auditReportsCount);
+
+    if (auditsCountToday >= 3) {
+      return {
+        error: "Daily audit limit reached: You can generate up to 3 AI audits per day. Please try again tomorrow.",
+      };
+    }
+  }
+
+
+
   // Strict concurrency control: Only 1 website analysis allowed at a time per user
+  // Auto-expire stale SYNCING status older than 5 minutes (prevents deadlock if a previous request timed out or crashed)
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  await prisma.integration.updateMany({
+    where: {
+      userId: session.user.id,
+      status: "SYNCING",
+      updatedAt: { lt: fiveMinutesAgo },
+    },
+    data: { status: "ACTIVE" },
+  });
+
   const ongoingAnalysis = await prisma.integration.findFirst({
     where: {
       userId: session.user.id,
@@ -156,6 +283,23 @@ export async function runAnalysisAction(integrationId: string) {
     return {
       error: `An analysis is already in progress for ${ongoingAnalysis.websiteUrl}. Please wait until it completes.`,
     };
+  }
+
+  // Pre-reserve daily usage slot for standard users to prevent parallel-request race conditions
+  let reservedUsageLogId: string | null = null;
+  if (dbUser.role !== "ADMIN") {
+    try {
+      const reserved = await prisma.auditUsageLog.create({
+        data: {
+          userId: session.user.id,
+          integrationId: targetIntegration.id,
+          websiteUrl: targetIntegration.websiteUrl,
+        },
+      });
+      reservedUsageLogId = reserved.id;
+    } catch {
+      // ignore
+    }
   }
 
   try {
@@ -291,15 +435,27 @@ export async function runAnalysisAction(integrationId: string) {
     });
 
     revalidatePath("/dashboard/integrations");
+    revalidatePath("/dashboard/audits");
     return { success: true, data: updated, auditReport: savedReport };
   } catch (error: any) {
     console.error("Error running analysis:", error);
+
+    // Rollback reserved usage slot on failure so user is not penalized for system errors
+    if (reservedUsageLogId) {
+      await prisma.auditUsageLog.delete({ where: { id: reservedUsageLogId } }).catch(() => {});
+    }
+
     // Release lock on error
     await prisma.integration.update({
       where: { id: integrationId },
       data: { status: "ACTIVE" },
     }).catch(() => {});
-    return { error: error?.message || "Failed to run analysis. Please try again." };
+
+    const friendlyMessage = sanitizeErrorMessage(
+      error,
+      "Unable to complete AI analysis at this moment. Please try again shortly."
+    );
+    return { error: friendlyMessage };
   }
 }
 
@@ -355,7 +511,7 @@ export async function analyzeCompetitorAction(payload: {
 
   const dbUser = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { isActive: true },
+    select: { isActive: true, role: true },
   });
 
   if (!dbUser?.isActive) {
@@ -365,6 +521,53 @@ export async function analyzeCompetitorAction(payload: {
   const { targetUrl, competitorUrl } = payload;
   if (!competitorUrl || !competitorUrl.trim()) {
     return { error: "Competitor URL is required." };
+  }
+
+  // SSRF Protection on competitor URL
+  if (!isSafePublicUrl(competitorUrl)) {
+    return { error: "Invalid competitor URL. Localhost and private IP addresses are blocked." };
+  }
+
+  // Tenant security: verify targetUrl belongs to this user (unless admin)
+  if (dbUser.role !== "ADMIN") {
+    const targetCanonical = extractCanonicalDomain(targetUrl || "");
+    const userIntegrations = await prisma.integration.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      select: {
+        id: true,
+        websiteUrl: true,
+      },
+    });
+
+    const ownsIntegration = userIntegrations.some(
+      (item) => extractCanonicalDomain(item.websiteUrl) === targetCanonical
+    );
+
+    if (!ownsIntegration) {
+      return { error: "Target website must be one of your connected websites." };
+    }
+
+    // Daily competitor analysis limit: 5 scans per day for USER role
+    const todayDateString = new Date().toISOString().slice(0, 10);
+    const competitorLimitKey = `comp_${session.user.id}_${todayDateString}`;
+    
+    const competitorUsage = await prisma.rateLimit.findUnique({
+      where: { ip: competitorLimitKey },
+    });
+
+    if (competitorUsage && competitorUsage.attempts >= 5) {
+      return {
+        error: "Daily competitor scan limit reached (5 scans per day). Please try again tomorrow.",
+      };
+    }
+
+    await prisma.rateLimit.upsert({
+      where: { ip: competitorLimitKey },
+      update: { attempts: { increment: 1 } },
+      create: { ip: competitorLimitKey, attempts: 1 },
+    });
   }
 
   try {
@@ -451,7 +654,91 @@ export async function analyzeCompetitorAction(payload: {
     return { success: true, comparison };
   } catch (error: any) {
     console.error("Error analyzing competitor:", error);
-    return { error: "Failed to analyze competitor website. Please check the URL and try again." };
+    return { error: sanitizeErrorMessage(error, "Unable to analyze competitor website. Please check the URL and try again.") };
   }
+}
+
+export async function getDailyAuditUsageAction() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { error: "Unauthorized" };
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { isActive: true, role: true },
+  });
+
+  if (!dbUser?.isActive) {
+    return { error: "User account is inactive." };
+  }
+
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  // Sync any legacy reports from today that don't have AuditUsageLog yet
+  const [usageLogsCount, auditReportsCount] = await Promise.all([
+    prisma.auditUsageLog.count({
+      where: {
+        userId: session.user.id,
+        createdAt: {
+          gte: startOfDay,
+        },
+      },
+    }),
+    prisma.auditReport.count({
+      where: {
+        userId: session.user.id,
+        createdAt: {
+          gte: startOfDay,
+        },
+      },
+    }),
+  ]);
+
+  if (auditReportsCount > usageLogsCount) {
+    const existingReportsToday = await prisma.auditReport.findMany({
+      where: {
+        userId: session.user.id,
+        createdAt: { gte: startOfDay },
+      },
+      select: { integrationId: true, websiteUrl: true, createdAt: true },
+    });
+    for (const r of existingReportsToday) {
+      await prisma.auditUsageLog
+        .create({
+          data: {
+            userId: session.user.id,
+            integrationId: r.integrationId,
+            websiteUrl: r.websiteUrl,
+            createdAt: r.createdAt,
+          },
+        })
+        .catch(() => {});
+    }
+  }
+
+  const refreshedUsageCount = await prisma.auditUsageLog.count({
+    where: {
+      userId: session.user.id,
+      createdAt: {
+        gte: startOfDay,
+      },
+    },
+  });
+
+  const usedToday = Math.max(refreshedUsageCount, auditReportsCount);
+  const limit = 3;
+  const isAdmin = dbUser.role === "ADMIN";
+
+  return {
+    success: true,
+    data: {
+      usedToday,
+      limit,
+      remaining: isAdmin ? Infinity : Math.max(0, limit - usedToday),
+      isAdmin,
+    },
+  };
 }
 

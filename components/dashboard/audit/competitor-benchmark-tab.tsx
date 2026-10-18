@@ -45,7 +45,7 @@ export function CompetitorBenchmarkTab({
             { name: "Sticky Floating Add-to-Cart Bar", target: false, competitor: true, verdict: "HiSmile locks a floating Add-to-Cart bar on all mobile PDPs, eliminating 38% cart drop-offs." },
             { name: "Video Before/After Social Proof", target: false, competitor: true, verdict: "Features real TikTok customer shade-guide results directly above the price tag." },
             { name: "Schema.org Product & Review Rich Snippets", target: false, competitor: true, verdict: "Full JSON-LD Product schema enables Google & ChatGPT to display 4.8★ star ratings." },
-            { name: "1-Tap Express Pay (Shop Pay & Apple Pay)", target: true, competitor: true, verdict: "Both stores utilize accelerated express checkouts for fast mobile conversions." },
+            { name: "1-Tap Express Pay (Shop Pay & Apple Pay)", target: true, competitor: true, verdict: "Both websites utilize accelerated express checkouts for fast mobile conversions." },
             { name: "Free Shipping Visual Progress Bar", target: false, competitor: true, verdict: "HiSmile slide-out drawer has a real-time progress bar unlocking free shipping at $50." },
           ],
           vulnerabilities: [
@@ -101,7 +101,7 @@ export function CompetitorBenchmarkTab({
             { name: "Schema.org Rich Entity Metadata", target: false, competitor: true, verdict: "Fully indexed by Gemini, Perplexity and ChatGPT for AI shopping discovery." },
           ],
           vulnerabilities: [
-            "Top industry stores remove all shipping fee surprises before the final checkout step.",
+            "Top industry leaders remove all fee surprises before the final checkout step.",
             "They utilize micro-animations on the primary CTA to draw immediate visual focus."
           ],
           winningMoves: [
@@ -629,7 +629,7 @@ export function CompetitorBenchmarkTab({
             Strategic Gap Analysis &amp; 3 Winning Moves
           </h4>
           <p className="text-[16px] text-zinc-500 mt-0.5">
-            Key psychological weaknesses identified on your store vs tactical moves to win customers back.
+            Key psychological weaknesses identified on your website vs tactical moves to win customers back.
           </p>
         </div>
 

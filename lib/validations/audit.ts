@@ -80,7 +80,7 @@ export const CompetitorBenchmarkSchema = z.object({
 
 export const AuditReportDataSchema = z.object({
   overallScore: z.coerce.number().min(0).max(100).default(68),
-  estimatedRevenueLoss: z.string().min(1).default("18% - 28% in Lost Conversions"),
+  estimatedRevenueLoss: z.string().min(1).default("18% - 28%"),
   summary: z.string().min(1).default("Comprehensive conversion rate optimization analysis completed."),
   websiteType: z
     .preprocess((val) => {

@@ -285,7 +285,7 @@ export const PILLAR_DATA: Record<string, PillarDetail> = {
           "Remove generic clip-art security locks and bright rainbow badges. Use clean, minimal monochrome trust chips with modern fonts and generous spacing.",
         expectedBenefit: "+21% Higher Brand Trust & Premium Perception",
         rationale:
-          "Shoppers associate cheap-looking graphics with untrustworthy dropshipping stores. A clean, minimalist layout makes your brand look established and premium.",
+          "Shoppers associate cheap-looking graphics with untrustworthy dropshipping sites. A clean, minimalist layout makes your brand look established and premium.",
         effort: "Strategic (~2h)",
         actionableSnippet:
           "Replace generic security icons with sleek monochrome chips: '🛡️ 100% Certified Authentic' & '📦 Dispatched in 24 Hours'.",

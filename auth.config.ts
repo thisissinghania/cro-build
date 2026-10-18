@@ -20,6 +20,10 @@ export default {
           throw new Error("Invalid email or password")
         }
 
+        if (!user.isActive) {
+          throw new Error("Your account has been deactivated. Please contact support.")
+        }
+
         // 3. Verify Password
         const passwordsMatch = await bcrypt.compare(credentials.password as string, user.password)
         if (!passwordsMatch) {
@@ -46,14 +50,22 @@ export default {
         session.user.role = token.role as "ADMIN" | "USER"
       }
       
-      // Force DB check on every session retrieval to ensure deactivated users are kicked out
-      if (session?.user?.email) {
+      // Force DB check by immutable user ID on every session retrieval to ensure deactivated users are kicked out
+      const userId = token.sub || token.id;
+      if (userId && typeof userId === "string") {
         const dbUser = await prisma.user.findUnique({
-          where: { email: session.user.email },
-          select: { isActive: true }
+          where: { id: userId },
+          select: { id: true, email: true, isActive: true, role: true },
         });
         if (!dbUser || !dbUser.isActive) {
           throw new Error("User is deactivated");
+        }
+        // Keep session email and role in sync with database in case they were updated
+        if (dbUser.email && session.user) {
+          session.user.email = dbUser.email;
+        }
+        if (dbUser.role && session.user) {
+          session.user.role = dbUser.role as "ADMIN" | "USER";
         }
       }
 

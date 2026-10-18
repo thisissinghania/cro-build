@@ -33,6 +33,7 @@ model User {
   auditCredits        Int           @default(1)
   integrations        Integration[]
   auditReports        AuditReport[]
+  auditUsageLogs      AuditUsageLog[]
 
   notificationsReadAt DateTime?
   readNotificationIds String[]      @default([])
@@ -66,6 +67,9 @@ model RateLimit {
   attempts    Int       @default(0)
   lockedUntil DateTime?
   updatedAt   DateTime  @updatedAt
+
+  @@index([lockedUntil])
+  @@index([updatedAt])
 }
 
 enum Platform {
@@ -98,6 +102,11 @@ model Integration {
 
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
+
+  @@index([userId, websiteUrl])
+  @@index([userId])
+  @@index([userId, status])
+  @@index([createdAt])
 }
 
 model AuditReport {
@@ -116,5 +125,22 @@ model AuditReport {
   
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([integrationId])
+  @@index([createdAt])
 }
+
+model AuditUsageLog {
+  id             String      @id @default(uuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  integrationId  String?
+  websiteUrl     String
+  createdAt      DateTime    @default(now())
+
+  @@index([userId, createdAt])
+}
+
 

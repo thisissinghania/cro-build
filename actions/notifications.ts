@@ -50,10 +50,26 @@ export async function getNotificationsAction(payload: GetNotificationsPayload = 
       prisma.auditReport.findMany({
         where: isUser ? { userId: dbUser.id } : {},
         orderBy: { createdAt: "desc" },
+        take: 100,
+        select: {
+          id: true,
+          overallScore: true,
+          estimatedRevenueLoss: true,
+          websiteUrl: true,
+          createdAt: true,
+        },
       }),
       prisma.integration.findMany({
         where: isUser ? { userId: dbUser.id } : {},
         orderBy: { createdAt: "desc" },
+        take: 100,
+        select: {
+          id: true,
+          websiteUrl: true,
+          platformType: true,
+          status: true,
+          createdAt: true,
+        },
       }),
     ]);
 
@@ -61,12 +77,11 @@ export async function getNotificationsAction(payload: GetNotificationsPayload = 
 
     // Map audits into notifications
     audits.forEach((a) => {
-      const blockersCount = Array.isArray(a.recommendations) ? a.recommendations.length : 0;
       const isAuditRead = a.createdAt.getTime() <= readAt || readIds.has(`audit-${a.id}`);
       allItems.push({
         id: `audit-${a.id}`,
         title: "AI CRO Audit Completed",
-        message: `Analysis completed with an overall score of ${a.overallScore}/100 and ${blockersCount} actionable conversion blockers.`,
+        message: `Analysis completed with an overall score of ${a.overallScore}/100 and prioritized conversion recommendations.`,
         type: "AUDIT",
         target: a.websiteUrl,
         date: a.createdAt.toISOString(),
@@ -173,6 +188,7 @@ export async function markAllNotificationsReadAction(): Promise<{ success: boole
       where: { id: session.user.id },
       data: {
         notificationsReadAt: new Date(),
+        readNotificationIds: [], // Reset individual array to keep DB row lightweight since all earlier are marked read
       },
     });
 
@@ -204,10 +220,12 @@ export async function markNotificationReadAction(notificationId: string): Promis
 
     const existingIds = dbUser.readNotificationIds || [];
     if (!existingIds.includes(notificationId)) {
+      // Keep only the latest 50 entries to avoid unbounded PostgreSQL array growth
+      const cappedIds = [...existingIds, notificationId].slice(-50);
       await prisma.user.update({
         where: { id: session.user.id },
         data: {
-          readNotificationIds: [...existingIds, notificationId],
+          readNotificationIds: cappedIds,
         },
       });
     }

@@ -15,7 +15,8 @@ export const verifyEmailAction = async (token: string) => {
 
     const hasExpired = new Date(existingToken.expires) < new Date();
     if (hasExpired) {
-      return { error: "Token has expired!" };
+      await prisma.verificationToken.delete({ where: { id: existingToken.id } }).catch(() => {});
+      return { error: "This confirmation link has expired. Please request a new confirmation email." };
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -40,37 +41,43 @@ export const verifyEmailAction = async (token: string) => {
 
     return { success: "Email verified successfully! You can now log in." };
   } catch (error) {
-    return { error: "Something went wrong!" };
+    console.error("Email verification error:", error);
+    return { error: "Unable to verify your email at this time. Please request a new confirmation link." };
   }
 };
 
 export const updatePasswordAction = async (values: any, token?: string | null) => {
   try {
     if (!token) {
-      return { error: "Missing token!" };
+      return { error: "Reset token is missing. Please use the link provided in your email." };
     }
 
-    const { password } = values;
+    const { password } = values || {};
+    if (!password || typeof password !== "string" || password.length < 6) {
+      return { error: "Password must be at least 6 characters long." };
+    }
 
     const existingToken = await prisma.passwordResetToken.findUnique({
       where: { token }
     });
 
     if (!existingToken) {
-      return { error: "Invalid token!" };
+      return { error: "Invalid or expired reset link. Please request a new password reset." };
     }
 
     const hasExpired = new Date(existingToken.expires) < new Date();
     if (hasExpired) {
-      return { error: "Token has expired!" };
+      await prisma.passwordResetToken.delete({ where: { id: existingToken.id } }).catch(() => {});
+      return { error: "This password reset link has expired. Please request a new one." };
     }
 
+    const tokenEmail = existingToken.email.trim().toLowerCase();
     const existingUser = await prisma.user.findUnique({
-      where: { email: existingToken.email }
+      where: { email: tokenEmail }
     });
 
     if (!existingUser) {
-      return { error: "Email does not exist!" };
+      return { error: "Account not found for this email address." };
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -84,8 +91,18 @@ export const updatePasswordAction = async (values: any, token?: string | null) =
       where: { id: existingToken.id }
     });
 
-    return { success: "Password updated successfully!" };
+    // Clear any active rate limits or lockouts for this email so user can immediately log in
+    await prisma.rateLimit.deleteMany({
+      where: {
+        ip: {
+          endsWith: `:${tokenEmail}`,
+        },
+      },
+    }).catch(() => {});
+
+    return { success: "Password updated successfully! You can now log in." };
   } catch (error) {
-    return { error: "Something went wrong!" };
+    console.error("Password update error:", error);
+    return { error: "Unable to update your password at this time. Please try again." };
   }
 };

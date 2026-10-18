@@ -1,16 +1,19 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   getIntegrationsAction,
   createIntegrationAction,
+  deleteIntegrationAction,
   runAnalysisAction,
-  getLatestAuditReportAction
+  getLatestAuditReportAction,
+  getDailyAuditUsageAction,
 } from "@/actions/integrations";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { toast } from "sonner";
 import { AuditReportView } from "./audit-report-view";
+import { isValidWebsiteUrl } from "@/lib/validations/integration";
 import {
   Search,
   Link as LinkIcon,
@@ -40,7 +43,8 @@ import {
   Download,
   Eye,
   FileSpreadsheet,
-  Check
+  Check,
+  Trash2
 } from "lucide-react";
 
 export function IntegrationsClient({
@@ -62,6 +66,37 @@ export function IntegrationsClient({
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlToAnalyze, setUrlToAnalyze] = useState("");
+  const urlScannerRef = useRef<HTMLDivElement>(null);
+  const analyzeBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Click outside to close URL scanner input
+  useEffect(() => {
+    if (!showUrlInput) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        urlScannerRef.current?.contains(target) ||
+        analyzeBtnRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setShowUrlInput(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowUrlInput(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showUrlInput]);
 
   // Filter State
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -78,6 +113,7 @@ export function IntegrationsClient({
   const [shopifyUrl, setShopifyUrl] = useState("");
 
   const [ga4ModalOpen, setGa4ModalOpen] = useState(false);
+  const [ga4WebsiteUrl, setGa4WebsiteUrl] = useState("");
 
   // Concurrency state: Only 1 website analysis allowed at a time
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
@@ -87,27 +123,30 @@ export function IntegrationsClient({
   const queryTab = searchParams.get("tab");
 
   // Tab State: 'latest' | 'list'
-  const [activeTab, setActiveTab] = useState<'latest' | 'list'>(
-    role === "ADMIN" || initialTab === "list" || queryTab === "list" ? "list" : "latest"
-  );
+  const [activeTab, setActiveTab] = useState<'latest' | 'list'>(() => {
+    if (role === "ADMIN") return "list";
+    if (queryTab === "list") return "list";
+    if (queryTab === "latest") return "latest";
+    return initialTab === "list" ? "list" : "latest";
+  });
 
   useEffect(() => {
-    if (queryTab === "list" || initialTab === "list") {
+    if (role === "ADMIN") return;
+    if (queryTab === "list") {
       setActiveTab("list");
     } else if (queryTab === "latest") {
       setActiveTab("latest");
     }
-  }, [queryTab, initialTab]);
+  }, [queryTab, role]);
 
   const handleTabSwitch = (tab: "latest" | "list") => {
     setActiveTab(tab);
+    if (tab === "latest" && !latestReport && role === "USER") {
+      loadLatestReport();
+    }
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
-      if (tab === "list") {
-        url.searchParams.set("tab", "list");
-      } else {
-        url.searchParams.delete("tab");
-      }
+      url.searchParams.set("tab", tab);
       window.history.replaceState(null, "", url.toString());
     }
   };
@@ -115,6 +154,26 @@ export function IntegrationsClient({
   // Audit Report State
   const [latestReport, setLatestReport] = useState<any | null>(initialReport);
   const [loadingReport, setLoadingReport] = useState(false);
+
+  // Daily Audit Usage (3 per day limit for USER role)
+  const [dailyUsage, setDailyUsage] = useState<{ usedToday: number; limit: number; remaining: number; isAdmin: boolean }>({
+    usedToday: 0,
+    limit: 3,
+    remaining: 3,
+    isAdmin: role === "ADMIN",
+  });
+
+  const fetchDailyUsage = useCallback(async () => {
+    if (role === "ADMIN") return;
+    const res = await getDailyAuditUsageAction();
+    if (res?.success && res.data) {
+      setDailyUsage(res.data);
+    }
+  }, [role]);
+
+  useEffect(() => {
+    fetchDailyUsage();
+  }, [fetchDailyUsage]);
 
   const loadLatestReport = useCallback(async (integrationId?: string) => {
     setLoadingReport(true);
@@ -146,19 +205,23 @@ export function IntegrationsClient({
         await loadLatestReport(integrationId);
       }
       handleTabSwitch('latest');
+      fetchDailyUsage();
     }
     fetchIntegrations();
   };
 
   const handleAnalyzeUrl = async () => {
-    if (!urlToAnalyze) return;
+    if (!isValidWebsiteUrl(urlToAnalyze)) return;
     setIsSubmitting(true);
     const result = await createIntegrationAction({
-      websiteUrl: urlToAnalyze,
+      websiteUrl: urlToAnalyze.trim(),
       platformType: "CUSTOM_URL"
     });
     setIsSubmitting(false);
-    if (result.success) {
+    if (result.error) {
+      toast.error(result.error);
+    } else if (result.success) {
+      toast.success("Website connected successfully!");
       setUrlToAnalyze("");
       setShowUrlInput(false);
       handleTabSwitch("list");
@@ -181,17 +244,48 @@ export function IntegrationsClient({
   };
 
   const handleConnectGA4 = async () => {
+    const cleanUrl = ga4WebsiteUrl.trim();
+    if (!cleanUrl || !isValidWebsiteUrl(cleanUrl)) {
+      toast.error("Please enter a valid website URL for this GA4 property.");
+      return;
+    }
     setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 1500)); // Simulate Google OAuth delay
+    await new Promise((r) => setTimeout(r, 1200)); // Simulate Google OAuth delay
     const result = await createIntegrationAction({
-      websiteUrl: "Google Analytics 4 Data", // In real OAuth, we fetch property name
-      platformType: "GA4"
+      websiteUrl: cleanUrl,
+      platformType: "GA4",
     });
     setIsSubmitting(false);
-    if (result.success) {
+    if (result.error) {
+      toast.error(result.error);
+    } else if (result.success) {
+      toast.success("Google Analytics 4 connected successfully!");
       setGa4ModalOpen(false);
-      setActiveTab("list");
+      setGa4WebsiteUrl("");
+      handleTabSwitch("list");
       fetchIntegrations();
+    }
+  };
+
+  const handleDeleteIntegration = async (id: string, url: string) => {
+    if (
+      !confirm(
+        `Are you sure you want to disconnect ${url}? All associated audit data for this integration will be removed.`
+      )
+    ) {
+      return;
+    }
+    setIsSubmitting(true);
+    const res = await deleteIntegrationAction(id);
+    setIsSubmitting(false);
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success("Website disconnected successfully.");
+      fetchIntegrations();
+      if (latestReport?.integrationId === id) {
+        setLatestReport(null);
+      }
     }
   };
 
@@ -256,9 +350,22 @@ export function IntegrationsClient({
         {/* HEADER: Title on Left, Buttons on Right */}
         <div className="p-6 border-b border-zinc-100 flex flex-col xl:flex-row xl:items-center justify-between gap-6">
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-zinc-900">
-              {role === "ADMIN" ? "Platform Integrations" : "Integrations & Audits"}
-            </h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-xl font-bold tracking-tight text-zinc-900">
+                {role === "ADMIN" ? "Platform Integrations" : "Integrations & Audits"}
+              </h1>
+              {role === "USER" && (
+                <span
+                  className={`inline-flex items-center gap-1.5 h-[26px] px-2.5 rounded-[4px] text-xs font-semibold border ${dailyUsage.usedToday >= 3
+                    ? "bg-rose-50 text-rose-700 border-rose-200"
+                    : "bg-indigo-50 text-indigo-700 border-indigo-200"
+                    }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Daily Limit: {dailyUsage.usedToday}/3 Audits
+                </span>
+              )}
+            </div>
             <p className="text-sm text-zinc-500 mt-1">
               {role === "ADMIN" ? "Manage all connected websites across the platform." : "Manage connected websites and view your latest AI audit reports."}
             </p>
@@ -268,6 +375,7 @@ export function IntegrationsClient({
             {role === "USER" && (
               <>
                 <button
+                  ref={analyzeBtnRef}
                   onClick={() => setShowUrlInput(!showUrlInput)}
                   disabled={isAnyAnalyzing}
                   className="flex items-center gap-2 h-[48px] px-4 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
@@ -408,31 +516,60 @@ export function IntegrationsClient({
 
         {/* URL SCANNER SECTION (FULL WIDTH) */}
         {showUrlInput && (
-          <div className="p-6 border-b border-zinc-100 bg-zinc-50/50 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div
+            ref={urlScannerRef}
+            className="p-6 border-b border-zinc-100 bg-zinc-50/50 animate-in fade-in slide-in-from-top-2 duration-300"
+          >
             <div className="w-full">
               <label className="block text-sm font-semibold text-zinc-900 mb-2">Enter Website URL to Analyze</label>
               <div className="flex flex-col sm:flex-row items-center gap-4">
                 <div className="relative w-full">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Globe className="h-5 w-5 text-zinc-400" />
+                    <Globe className={`h-5 w-5 transition-colors ${urlToAnalyze.trim()
+                      ? isValidWebsiteUrl(urlToAnalyze)
+                        ? "text-emerald-500"
+                        : "text-rose-400"
+                      : "text-zinc-400"
+                      }`} />
                   </div>
                   <input
-                    type="url"
-                    className="block w-full pl-12 pr-4 h-[48px] border border-zinc-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                    placeholder="https://yourwebsite.com"
+                    type="text"
+                    className={`block w-full pl-12 pr-10 h-[48px] border rounded-lg text-sm bg-white transition-all outline-none ${urlToAnalyze.trim() && !isValidWebsiteUrl(urlToAnalyze)
+                      ? "border-rose-300 focus:border-rose-500 focus:ring-1 focus:ring-rose-500"
+                      : isValidWebsiteUrl(urlToAnalyze)
+                        ? "border-emerald-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                        : "border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                      }`}
+                    placeholder="https://yourwebsite.com or example.com"
                     value={urlToAnalyze}
                     onChange={(e) => setUrlToAnalyze(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && isValidWebsiteUrl(urlToAnalyze) && !isSubmitting) {
+                        handleAnalyzeUrl();
+                      }
+                    }}
                     autoFocus
                   />
+                  {isValidWebsiteUrl(urlToAnalyze) && (
+                    <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={handleAnalyzeUrl}
-                  disabled={isSubmitting || !urlToAnalyze}
-                  className="w-full sm:w-auto h-[48px] px-8 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors cursor-pointer whitespace-nowrap shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center min-w-[140px]"
+                  disabled={isSubmitting || !isValidWebsiteUrl(urlToAnalyze)}
+                  className="w-full sm:w-auto h-[48px] px-8 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors cursor-pointer whitespace-nowrap shadow-sm disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center min-w-[140px]"
                 >
                   {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Scan Now"}
                 </button>
               </div>
+              {urlToAnalyze.trim().length > 0 && !isValidWebsiteUrl(urlToAnalyze) && (
+                <p className="text-xs text-rose-600 mt-1.5 flex items-center gap-1 font-medium">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  Please enter a valid website URL (e.g. example.com or https://example.com)
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -536,55 +673,65 @@ export function IntegrationsClient({
                               )}
                               {role === "USER" && (
                                 <td className="p-3.5 align-middle text-right">
-                                  {integration.auditsGenerated === 0 ? (
+                                  <div className="flex items-center justify-end gap-2">
+                                    {integration.auditsGenerated === 0 ? (
+                                      <button
+                                        onClick={() => handleRunAnalysis(integration.id)}
+                                        disabled={isAnyAnalyzing}
+                                        title={isRowDisabled ? "Another analysis is currently in progress. Please wait until it completes." : undefined}
+                                        className={`inline-flex items-center justify-center gap-2 h-[38px] px-4 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${isThisAnalyzing
+                                          ? "bg-indigo-500 text-white cursor-wait opacity-90"
+                                          : isRowDisabled
+                                            ? "bg-zinc-200 text-zinc-400 cursor-not-allowed opacity-60"
+                                            : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98] cursor-pointer"
+                                          }`}
+                                      >
+                                        {isThisAnalyzing ? (
+                                          <>
+                                            <Loader2 className="w-4 h-4 animate-spin text-white" />
+                                            Analyzing...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Sparkles className="w-4 h-4" />
+                                            Analyze Now
+                                          </>
+                                        )}
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleRunAnalysis(integration.id)}
+                                        disabled={isAnyAnalyzing}
+                                        title={isRowDisabled ? "Another analysis is currently in progress. Please wait until it completes." : undefined}
+                                        className={`inline-flex items-center justify-center gap-2 h-[38px] px-4 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${isThisAnalyzing
+                                          ? "bg-indigo-50 text-indigo-600 border border-indigo-200 cursor-wait opacity-90"
+                                          : isRowDisabled
+                                            ? "bg-zinc-100 text-zinc-400 border border-zinc-200 cursor-not-allowed opacity-60"
+                                            : "bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 active:scale-[0.98] cursor-pointer"
+                                          }`}
+                                      >
+                                        {isThisAnalyzing ? (
+                                          <>
+                                            <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                                            Analyzing...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <RefreshCw className="w-3.5 h-3.5" />
+                                            Re-Analyze
+                                          </>
+                                        )}
+                                      </button>
+                                    )}
                                     <button
-                                      onClick={() => handleRunAnalysis(integration.id)}
-                                      disabled={isAnyAnalyzing}
-                                      title={isRowDisabled ? "Another analysis is currently in progress. Please wait until it completes." : undefined}
-                                      className={`inline-flex items-center justify-center gap-2 h-[38px] px-4 ml-auto text-sm font-medium rounded-lg transition-all whitespace-nowrap ${isThisAnalyzing
-                                        ? "bg-indigo-500 text-white cursor-wait opacity-90"
-                                        : isRowDisabled
-                                          ? "bg-zinc-200 text-zinc-400 cursor-not-allowed opacity-60"
-                                          : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98] cursor-pointer"
-                                        }`}
+                                      onClick={() => handleDeleteIntegration(integration.id, integration.websiteUrl)}
+                                      disabled={isThisAnalyzing || isSubmitting}
+                                      title="Disconnect and remove this website"
+                                      className="inline-flex items-center justify-center w-[38px] h-[38px] text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-zinc-200 hover:border-rose-200 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                     >
-                                      {isThisAnalyzing ? (
-                                        <>
-                                          <Loader2 className="w-4 h-4 animate-spin text-white" />
-                                          Analyzing...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Sparkles className="w-4 h-4" />
-                                          Analyze Now
-                                        </>
-                                      )}
+                                      <Trash2 className="w-4 h-4" />
                                     </button>
-                                  ) : (
-                                    <button
-                                      onClick={() => handleRunAnalysis(integration.id)}
-                                      disabled={isAnyAnalyzing}
-                                      title={isRowDisabled ? "Another analysis is currently in progress. Please wait until it completes." : undefined}
-                                      className={`inline-flex items-center justify-center gap-2 h-[38px] px-4 ml-auto text-sm font-medium rounded-lg transition-all whitespace-nowrap ${isThisAnalyzing
-                                        ? "bg-indigo-50 text-indigo-600 border border-indigo-200 cursor-wait opacity-90"
-                                        : isRowDisabled
-                                          ? "bg-zinc-100 text-zinc-400 border border-zinc-200 cursor-not-allowed opacity-60"
-                                          : "bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 active:scale-[0.98] cursor-pointer"
-                                        }`}
-                                    >
-                                      {isThisAnalyzing ? (
-                                        <>
-                                          <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
-                                          Analyzing...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <RefreshCw className="w-3.5 h-3.5" />
-                                          Re-Analyze
-                                        </>
-                                      )}
-                                    </button>
-                                  )}
+                                  </div>
                                 </td>
                               )}
                             </tr>
@@ -637,11 +784,10 @@ export function IntegrationsClient({
                           <button
                             key={pageNum}
                             onClick={() => setCurrentPage(pageNum)}
-                            className={`w-[40px] h-[40px] flex items-center justify-center text-sm font-medium rounded-lg transition-colors cursor-pointer ${
-                              currentPage === pageNum
-                                ? "bg-indigo-50 text-indigo-600 font-bold"
-                                : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"
-                            }`}
+                            className={`w-[40px] h-[40px] flex items-center justify-center text-sm font-medium rounded-lg transition-colors cursor-pointer ${currentPage === pageNum
+                              ? "bg-indigo-50 text-indigo-600 font-bold"
+                              : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"
+                              }`}
                           >
                             {pageNum}
                           </button>
@@ -747,21 +893,40 @@ export function IntegrationsClient({
               <h3 className="text-xl font-bold text-zinc-900 mb-2">Connect Google Analytics</h3>
               <p className="text-sm text-zinc-500">Authorize CRO Platform to read your traffic and conversion data securely via Google.</p>
             </div>
-            <div className="p-6 bg-zinc-50 flex flex-col gap-3">
-              <button
-                onClick={handleConnectGA4}
-                disabled={isSubmitting}
-                className="w-full h-[48px] px-4 text-sm font-medium text-white bg-[#4285F4] rounded-lg hover:bg-[#3367D6] flex items-center justify-center shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign in with Google"}
-              </button>
-              <button
-                onClick={() => setGa4ModalOpen(false)}
-                disabled={isSubmitting}
-                className="w-full h-[48px] px-4 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Cancel
-              </button>
+            <div className="p-6 bg-zinc-50 flex flex-col gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-zinc-900 mb-2">Connected Website URL</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Globe className="h-4 w-4 text-zinc-400" />
+                  </div>
+                  <input
+                    type="text"
+                    value={ga4WebsiteUrl}
+                    onChange={(e) => setGa4WebsiteUrl(e.target.value)}
+                    placeholder="example.com or https://example.com"
+                    className="w-full h-[48px] pl-10 pr-4 border border-zinc-200 rounded-lg text-sm focus:ring-1 focus:ring-[#E37400] focus:border-[#E37400] outline-none bg-white transition-colors"
+                  />
+                </div>
+                <p className="text-xs text-zinc-500 mt-1.5">Enter the exact website domain tracked by your Google Analytics property.</p>
+              </div>
+
+              <div className="flex flex-col gap-3 pt-2">
+                <button
+                  onClick={handleConnectGA4}
+                  disabled={isSubmitting || !ga4WebsiteUrl.trim()}
+                  className="w-full h-[48px] px-4 text-sm font-medium text-white bg-[#4285F4] rounded-lg hover:bg-[#3367D6] flex items-center justify-center shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign in & Connect GA4"}
+                </button>
+                <button
+                  onClick={() => setGa4ModalOpen(false)}
+                  disabled={isSubmitting}
+                  className="w-full h-[48px] px-4 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>

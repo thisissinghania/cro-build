@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
 
 export const deleteUserAction = async (userId: string) => {
   try {
@@ -13,10 +14,11 @@ export const deleteUserAction = async (userId: string) => {
 
     const adminUser = await prisma.user.findUnique({
       where: { email: session.user.email },
+      select: { id: true, role: true, isActive: true },
     });
     
-    if (adminUser?.role !== "ADMIN") {
-      return { error: "Only administrators can delete users." };
+    if (!adminUser || !adminUser.isActive || adminUser.role !== "ADMIN") {
+      return { error: "Only active administrators can delete users." };
     }
 
     if (adminUser.id === userId) {
@@ -29,9 +31,9 @@ export const deleteUserAction = async (userId: string) => {
 
     revalidatePath("/dashboard/users");
     return { success: "User deleted successfully." };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Delete user error:", error);
-    return { error: "Failed to delete user." };
+    return { error: sanitizeErrorMessage(error, "Failed to delete user.") };
   }
 };
 
@@ -44,10 +46,11 @@ export const toggleUserStatusAction = async (userId: string, isActive: boolean) 
 
     const adminUser = await prisma.user.findUnique({
       where: { email: session.user.email },
+      select: { id: true, role: true, isActive: true },
     });
     
-    if (adminUser?.role !== "ADMIN") {
-      return { error: "Only administrators can update users." };
+    if (!adminUser || !adminUser.isActive || adminUser.role !== "ADMIN") {
+      return { error: "Only active administrators can update users." };
     }
 
     if (adminUser.id === userId) {
@@ -61,9 +64,9 @@ export const toggleUserStatusAction = async (userId: string, isActive: boolean) 
 
     revalidatePath("/dashboard/users");
     return { success: `User has been ${isActive ? "activated" : "deactivated"}.` };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Toggle user status error:", error);
-    return { error: "Failed to update user status." };
+    return { error: sanitizeErrorMessage(error, "Failed to update user status.") };
   }
 };
 
@@ -82,10 +85,11 @@ export const getUsersAction = async (payload: {
 
     const adminUser = await prisma.user.findUnique({
       where: { email: session.user.email },
+      select: { id: true, role: true, isActive: true },
     });
     
-    if (adminUser?.role !== "ADMIN") {
-      return { error: "Only administrators can view users." };
+    if (!adminUser || !adminUser.isActive || adminUser.role !== "ADMIN") {
+      return { error: "Only active administrators can view users." };
     }
 
     const { query, page, limit, from, to } = payload;
@@ -136,8 +140,8 @@ export const getUsersAction = async (payload: {
     ]);
 
     return { success: true, users, totalCount };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Get users error:", error);
-    return { error: "Failed to fetch users." };
+    return { error: sanitizeErrorMessage(error, "Failed to fetch users.") };
   }
 };

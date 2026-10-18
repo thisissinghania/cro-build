@@ -5,8 +5,17 @@ export const settingsSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   phone: z.string().min(1, "Phone number is required").regex(/^\(\d{3}\)\s\d{3}-\d{4}$/, "Must be a valid 10-digit number"),
   address: z.string().min(1, "Address is required"),
+  currentPassword: z.string().optional(),
   password: z.string().optional(),
   confirmPassword: z.string().optional(),
+}).refine((data) => {
+  if (data.password && !data.currentPassword) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Current password is required to set a new password",
+  path: ["currentPassword"],
 }).refine((data) => {
   if (data.password && data.password !== data.confirmPassword) {
     return false;

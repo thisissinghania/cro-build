@@ -1,7 +1,6 @@
 "use client";
 
-import { User, Mail, Phone, MapPin, Lock, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { User, Mail, Phone, MapPin, Lock } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { settingsSchema, type SettingsFormValues } from "@/lib/validations/settings";
@@ -11,9 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 export function SettingsForm({ user }: { user: any }) {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   const {
     register,
     handleSubmit,
@@ -28,6 +24,7 @@ export function SettingsForm({ user }: { user: any }) {
       email: user?.email || "",
       phone: user?.phone || "",
       address: user?.address || "",
+      currentPassword: "",
       password: "",
       confirmPassword: "",
     },
@@ -73,7 +70,7 @@ export function SettingsForm({ user }: { user: any }) {
     }
     if (res?.success) {
       toast.success(res.success);
-      // Optional: Clear passwords after successful update
+      setValue("currentPassword", "");
       setValue("password", "");
       setValue("confirmPassword", "");
     }
@@ -143,42 +140,56 @@ export function SettingsForm({ user }: { user: any }) {
             </div>
 
             <div className="pt-6 mt-6 border-t border-zinc-100">
-              <h2 className="text-lg font-bold text-zinc-900 mb-6">Security</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <h2 className="text-lg font-bold text-zinc-900 mb-6">Security & Password</h2>
+              <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">New Password (Optional)</label>
+                  <label className="block text-sm font-medium text-zinc-700 mb-2">Current Password</label>
                   <Input 
                     type="password" 
-                    placeholder="Enter new password" 
+                    placeholder="Enter your current password" 
                     leftIcon={<Lock size={20} />} 
-                    className={`bg-gray-50/50 ${errors.password ? 'border-red-500' : 'border-gray-200'}`} 
-                    {...register("password")} 
+                    className={`bg-gray-50/50 ${errors.currentPassword ? 'border-red-500' : 'border-gray-200'}`} 
+                    {...register("currentPassword")} 
                   />
-                  
-                  {passwordValue && (
-                    <div className="mt-3">
-                      <div className="flex gap-1.5 h-1.5 w-full rounded-full overflow-hidden">
-                        <div className={`h-full flex-1 rounded-full transition-colors ${strength.score >= 1 ? strength.color : 'bg-gray-200'}`} />
-                        <div className={`h-full flex-1 rounded-full transition-colors ${strength.score >= 2 ? strength.color : 'bg-gray-200'}`} />
-                        <div className={`h-full flex-1 rounded-full transition-colors ${strength.score >= 3 ? strength.color : 'bg-gray-200'}`} />
-                      </div>
-                      <p className={`mt-1.5 text-[12px] font-bold text-right ${strength.textColor}`}>{strength.text}</p>
-                    </div>
-                  )}
-
-                  {errors.password && !passwordValue && <p className="mt-1.5 text-[13px] text-red-500 font-medium">{errors.password.message}</p>}
+                  {errors.currentPassword && <p className="mt-1.5 text-[13px] text-red-500 font-medium">{errors.currentPassword.message}</p>}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">Confirm Password</label>
-                  <Input 
-                    type="password" 
-                    placeholder="Confirm new password" 
-                    leftIcon={<Lock size={20} />} 
-                    className={`bg-gray-50/50 ${errors.confirmPassword ? 'border-red-500' : 'border-gray-200'}`} 
-                    {...register("confirmPassword")} 
-                  />
-                  {errors.confirmPassword && <p className="mt-1.5 text-[13px] text-red-500 font-medium">{errors.confirmPassword.message}</p>}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-2">New Password (Optional)</label>
+                    <Input 
+                      type="password" 
+                      placeholder="Enter new password" 
+                      leftIcon={<Lock size={20} />} 
+                      className={`bg-gray-50/50 ${errors.password ? 'border-red-500' : 'border-gray-200'}`} 
+                      {...register("password")} 
+                    />
+                    
+                    {passwordValue && (
+                      <div className="mt-3">
+                        <div className="flex gap-1.5 h-1.5 w-full rounded-full overflow-hidden">
+                          <div className={`h-full flex-1 rounded-full transition-colors ${strength.score >= 1 ? strength.color : 'bg-gray-200'}`} />
+                          <div className={`h-full flex-1 rounded-full transition-colors ${strength.score >= 2 ? strength.color : 'bg-gray-200'}`} />
+                          <div className={`h-full flex-1 rounded-full transition-colors ${strength.score >= 3 ? strength.color : 'bg-gray-200'}`} />
+                        </div>
+                        <p className={`mt-1.5 text-[12px] font-bold text-right ${strength.textColor}`}>{strength.text}</p>
+                      </div>
+                    )}
+
+                    {errors.password && !passwordValue && <p className="mt-1.5 text-[13px] text-red-500 font-medium">{errors.password.message}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-2">Confirm New Password</label>
+                    <Input 
+                      type="password" 
+                      placeholder="Confirm new password" 
+                      leftIcon={<Lock size={20} />} 
+                      className={`bg-gray-50/50 ${errors.confirmPassword ? 'border-red-500' : 'border-gray-200'}`} 
+                      {...register("confirmPassword")} 
+                    />
+                    {errors.confirmPassword && <p className="mt-1.5 text-[13px] text-red-500 font-medium">{errors.confirmPassword.message}</p>}
+                  </div>
                 </div>
               </div>
             </div>

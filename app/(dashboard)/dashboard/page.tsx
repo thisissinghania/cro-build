@@ -16,6 +16,7 @@ import { PlatformChart } from "@/components/dashboard/platform-chart";
 import { UserChart } from "@/components/dashboard/user-chart";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { formatRevenueLossPercentage } from "@/lib/utils/formatters";
 
 function formatTimeAgo(date: Date | string) {
   const diffMs = new Date().getTime() - new Date(date).getTime();
@@ -237,14 +238,14 @@ export default async function DashboardPage() {
             </div>
           </div>
           <div className="text-3xl font-bold text-zinc-900">
-            {role === "ADMIN" ? "$18,450" : userAuditsCount > 0 ? `${userAvgScore}/100` : "N/A"}
+            {role === "ADMIN" ? "$0" : userAuditsCount > 0 ? `${userAvgScore}/100` : "N/A"}
           </div>
           <p className="mt-2 text-sm text-emerald-600 font-medium flex items-center gap-1">
             <TrendingUp className="w-4 h-4" />
             {role === "ADMIN"
-              ? "+15% from last month"
+              ? "Free Access Active (Initial Rollout)"
               : latestAudit
-                ? `Est. Loss: ${latestAudit.estimatedRevenueLoss}`
+                ? `Est. Loss: ${formatRevenueLossPercentage(latestAudit.estimatedRevenueLoss)}`
                 : "Run audit to calculate"}
           </p>
         </div>

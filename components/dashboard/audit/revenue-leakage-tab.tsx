@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { RecommendationCard } from "@/components/dashboard/audit/recommendation-card";
+import { formatRevenueLossPercentage } from "@/lib/utils/formatters";
 
 interface RevenueLeakageTabProps {
   report: any;
@@ -199,15 +200,15 @@ export function RevenueLeakageTab({
             </p>
           </div>
 
-          <div className="p-4 sm:p-5 bg-white rounded-xl border border-rose-200/70 shadow-[0_8px_30px_rgb(0,0,0,0.06)] flex flex-col items-center justify-center min-w-[200px] sm:min-w-[220px] shrink-0">
+          <div className="p-4 sm:p-5 bg-white rounded-xl border border-rose-200/70 shadow-[0_8px_30px_rgb(0,0,0,0.06)] flex flex-col items-center justify-center min-w-[200px] sm:min-w-[220px] shrink-0 text-center">
             <span className="text-xs uppercase font-bold text-zinc-400 mb-1">
               Monthly Loss
             </span>
             <span className="text-3xl sm:text-4xl font-bold text-rose-600 tracking-tight my-0.5">
-              {estLossString}
+              {formatRevenueLossPercentage(estLossString)}
             </span>
             <span className="inline-flex items-center justify-center h-[24px] px-2.5 rounded-[4px] text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 mt-2 whitespace-nowrap">
-              ~${(parsedLoss * 12).toLocaleString()} Lost Per Year
+              ~${annualAdditionalRevenue.toLocaleString()} Lost Per Year
             </span>
           </div>
         </div>

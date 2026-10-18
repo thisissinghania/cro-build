@@ -183,7 +183,7 @@ export function VisualCopyLabTab({
           {headlineVariants.map((item: any) => (
             <div
               key={item.id}
-              className="p-4 sm:p-5 bg-zinc-50/80 rounded-xl border border-zinc-200/70 flex flex-col md:flex-row md:items-center justify-between gap-4"
+              className="p-4 sm:p-5 bg-white rounded-xl border border-zinc-200/70 shadow-[0_4px_20px_rgb(0,0,0,0.02)] flex flex-col md:flex-row md:items-center justify-between gap-4"
             >
               <div className="space-y-2 flex-1">
                 <div className="flex items-center gap-2">
@@ -211,7 +211,7 @@ export function VisualCopyLabTab({
 
               <button
                 onClick={() => handleCopy(`${item.headline}\n${item.subheadline}`, item.id)}
-                className="inline-flex items-center justify-center gap-1.5 h-[44px] px-4 rounded-xl text-xs font-semibold bg-white hover:bg-zinc-100 text-zinc-800 border border-zinc-200 transition-colors cursor-pointer shrink-0 whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-1.5 h-[44px] px-4 rounded-xl text-xs font-semibold bg-zinc-50 hover:bg-zinc-100 text-zinc-800 border border-zinc-200 transition-colors cursor-pointer shrink-0 whitespace-nowrap"
               >
                 {copiedKey === item.id ? (
                   <>

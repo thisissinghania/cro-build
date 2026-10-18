@@ -14,32 +14,32 @@ import {
 
 const mockData = {
   "2026": [
-    { name: "Jan", revenue: 4000, users: 40, audits: 240 },
-    { name: "Feb", revenue: 5000, users: 50, audits: 300 },
-    { name: "Mar", revenue: 6500, users: 65, audits: 450 },
-    { name: "Apr", revenue: 8000, users: 80, audits: 600 },
-    { name: "May", revenue: 11000, users: 95, audits: 750 },
-    { name: "Jun", revenue: 14500, users: 110, audits: 900 },
-    { name: "Jul", revenue: 16000, users: 125, audits: 1050 },
-    { name: "Aug", revenue: 18450, users: 142, audits: 1204 },
-    { name: "Sep", revenue: 20000, users: 155, audits: 1350 },
-    { name: "Oct", revenue: 22500, users: 170, audits: 1500 },
-    { name: "Nov", revenue: 25000, users: 190, audits: 1700 },
-    { name: "Dec", revenue: 28000, users: 210, audits: 1900 },
+    { name: "Jan", revenue: 0, users: 40, audits: 240 },
+    { name: "Feb", revenue: 0, users: 50, audits: 300 },
+    { name: "Mar", revenue: 0, users: 65, audits: 450 },
+    { name: "Apr", revenue: 0, users: 80, audits: 600 },
+    { name: "May", revenue: 0, users: 95, audits: 750 },
+    { name: "Jun", revenue: 0, users: 110, audits: 900 },
+    { name: "Jul", revenue: 0, users: 125, audits: 1050 },
+    { name: "Aug", revenue: 0, users: 142, audits: 1204 },
+    { name: "Sep", revenue: 0, users: 155, audits: 1350 },
+    { name: "Oct", revenue: 0, users: 170, audits: 1500 },
+    { name: "Nov", revenue: 0, users: 190, audits: 1700 },
+    { name: "Dec", revenue: 0, users: 210, audits: 1900 },
   ],
   "2025": [
-    { name: "Jan", revenue: 2000, users: 20, audits: 100 },
-    { name: "Feb", revenue: 2500, users: 25, audits: 120 },
-    { name: "Mar", revenue: 3000, users: 30, audits: 150 },
-    { name: "Apr", revenue: 3500, users: 35, audits: 180 },
-    { name: "May", revenue: 4000, users: 40, audits: 200 },
-    { name: "Jun", revenue: 4500, users: 45, audits: 220 },
-    { name: "Jul", revenue: 5000, users: 50, audits: 250 },
-    { name: "Aug", revenue: 6000, users: 60, audits: 300 },
-    { name: "Sep", revenue: 7000, users: 70, audits: 350 },
-    { name: "Oct", revenue: 8000, users: 80, audits: 400 },
-    { name: "Nov", revenue: 9500, users: 95, audits: 480 },
-    { name: "Dec", revenue: 11000, users: 110, audits: 550 },
+    { name: "Jan", revenue: 0, users: 20, audits: 100 },
+    { name: "Feb", revenue: 0, users: 25, audits: 120 },
+    { name: "Mar", revenue: 0, users: 30, audits: 150 },
+    { name: "Apr", revenue: 0, users: 35, audits: 180 },
+    { name: "May", revenue: 0, users: 40, audits: 200 },
+    { name: "Jun", revenue: 0, users: 45, audits: 220 },
+    { name: "Jul", revenue: 0, users: 50, audits: 250 },
+    { name: "Aug", revenue: 0, users: 60, audits: 300 },
+    { name: "Sep", revenue: 0, users: 70, audits: 350 },
+    { name: "Oct", revenue: 0, users: 80, audits: 400 },
+    { name: "Nov", revenue: 0, users: 95, audits: 480 },
+    { name: "Dec", revenue: 0, users: 110, audits: 550 },
   ],
 };
 
@@ -52,7 +52,7 @@ export function PlatformChart() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <h2 className="text-xl font-bold text-zinc-900">Platform Growth</h2>
-          <p className="text-sm text-zinc-500 mt-1">Revenue, Users, and Audits overview</p>
+          <p className="text-sm text-zinc-500 mt-1">Platform Activity & Free Access Growth (Audits & Integrations)</p>
         </div>
         <select
           value={year}

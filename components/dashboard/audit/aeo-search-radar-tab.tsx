@@ -135,7 +135,7 @@ export function AeoSearchRadarTab({
       name: websiteType === "LOCAL_SERVICE" ? "LocalBusiness Schema" : "Organization / Product Schema",
       isActive: false,
       description: "Tells AI search models your exact business name, verified phone number, operating hours, and geo-coordinates in machine-readable JSON-LD.",
-      impact: "ChatGPT and Perplexity overlook your website and cite competing stores that have indexed schema."
+      impact: "ChatGPT and Perplexity overlook your website and cite competing websites that have indexed schema."
     },
     {
       name: "FAQPage Structured Data",

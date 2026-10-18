@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getAuditsAction, deleteAuditAction } from "@/actions/audits";
+import { getAuditsAction, deleteAuditAction, getAuditByIdAction } from "@/actions/audits";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { AuditReportView } from "./audit-report-view";
 import {
@@ -15,6 +15,8 @@ import {
   Loader2,
   Download,
 } from "lucide-react";
+import { downloadAuditExcel } from "@/lib/utils/download-excel";
+import { toast } from "sonner";
 
 export function AuditsClient({ role = "USER" }: { role?: string }) {
   const [audits, setAudits] = useState<any[]>([]);
@@ -40,6 +42,23 @@ export function AuditsClient({ role = "USER" }: { role?: string }) {
   const [selectedAuditForView, setSelectedAuditForView] = useState<any | null>(null);
   const [selectedAuditForDelete, setSelectedAuditForDelete] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [loadingViewId, setLoadingViewId] = useState<string | null>(null);
+
+  const handleViewAudit = async (auditSummary: any) => {
+    if (auditSummary.recommendations) {
+      setSelectedAuditForView(auditSummary);
+      return;
+    }
+    setLoadingViewId(auditSummary.id);
+    const res = await getAuditByIdAction(auditSummary.id);
+    setLoadingViewId(null);
+    if (res?.data) {
+      setSelectedAuditForView(res.data);
+    } else {
+      toast.error(res?.error || "Failed to load audit report details.");
+    }
+  };
 
   const fetchAudits = useCallback(async () => {
     setLoading(true);
@@ -74,8 +93,9 @@ export function AuditsClient({ role = "USER" }: { role?: string }) {
     const res = await deleteAuditAction(selectedAuditForDelete.id);
     setIsDeleting(false);
     if (res?.error) {
-      alert(res.error);
+      toast.error(res.error);
     } else {
+      toast.success("Audit report deleted successfully.");
       setSelectedAuditForDelete(null);
       fetchAudits();
     }
@@ -326,24 +346,38 @@ export function AuditsClient({ role = "USER" }: { role?: string }) {
                       {/* Action Buttons */}
                       <td className="p-3.5 align-middle text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {/* View Audit */}
                           <button
-                            onClick={() => setSelectedAuditForView(audit)}
-                            className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors cursor-pointer"
+                            onClick={() => handleViewAudit(audit)}
+                            disabled={loadingViewId === audit.id}
+                            className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors cursor-pointer inline-flex items-center disabled:opacity-50"
                             title="View Full Audit"
                           >
-                            <Eye className="w-4 h-4" />
+                            {loadingViewId === audit.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
                           </button>
 
                           {/* Download Excel */}
-                          <a
-                            href={`/api/audit/${audit.id}/export`}
-                            download
-                            className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer inline-flex items-center"
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (downloadingId) return;
+                              setDownloadingId(audit.id);
+                              await downloadAuditExcel(audit.id, audit.websiteUrl);
+                              setDownloadingId(null);
+                            }}
+                            disabled={downloadingId === audit.id}
+                            className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer inline-flex items-center disabled:opacity-50"
                             title="Download Excel Report"
                           >
-                            <Download className="w-4 h-4" />
-                          </a>
+                            {downloadingId === audit.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
+                          </button>
 
                           {/* Delete Audit */}
                           <button

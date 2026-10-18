@@ -18,6 +18,14 @@ export default auth((req) => {
     return Response.redirect(new URL("/", req.nextUrl));
   }
 
+  // Edge-level RBAC: Only active ADMINs can access /dashboard/users
+  if (isLoggedIn && req.nextUrl.pathname.startsWith("/dashboard/users")) {
+    const userRole = (req.auth?.user as any)?.role;
+    if (userRole !== "ADMIN") {
+      return Response.redirect(new URL("/dashboard", req.nextUrl));
+    }
+  }
+
   return undefined;
 });
 

@@ -25,6 +25,7 @@ import {
   DollarSign,
   Swords,
   ClipboardList,
+  Loader2,
 } from "lucide-react";
 
 import { PILLAR_DATA } from "@/lib/static/pillar-data";
@@ -33,6 +34,8 @@ import { CompetitorBenchmarkTab } from "@/components/dashboard/audit/competitor-
 import { AeoSearchRadarTab } from "@/components/dashboard/audit/aeo-search-radar-tab";
 import { VisualCopyLabTab } from "@/components/dashboard/audit/visual-copy-lab-tab";
 import { RecommendationCard } from "@/components/dashboard/audit/recommendation-card";
+import { formatRevenueLossPercentage } from "@/lib/utils/formatters";
+import { downloadAuditExcel } from "@/lib/utils/download-excel";
 
 export interface AuditReportViewProps {
   report: any;
@@ -58,6 +61,7 @@ export function AuditReportView({
   const [mainTab, setMainTab] = useState<"RECOMMENDATIONS" | "REVENUE" | "COMPETITOR" | "AEO" | "VISUAL">("RECOMMENDATIONS");
   const [priorityFilter, setPriorityFilter] = useState<"ALL" | "HIGH" | "MEDIUM" | "LOW">("ALL");
   const [copiedSnippetId, setCopiedSnippetId] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const formatReportDate = (dateString: string) => {
     if (!dateString) return "";
@@ -275,23 +279,22 @@ export function AuditReportView({
               </span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5 mt-2">
+            {/* Website URL */}
+            <div className="mt-2">
               <h2 className="text-2xl font-bold text-zinc-900 flex items-center gap-2">
-                <Globe className="w-6 h-6 text-indigo-600" />
+                <Globe className="w-6 h-6 text-indigo-600 shrink-0" />
                 {report.websiteUrl}
               </h2>
-              {businessNiche && (
-                <span className="inline-flex items-center gap-1.5 h-[26px] px-2.5 rounded-[4px] text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  <Briefcase className="w-3.5 h-3.5" />
-                  {businessNiche}
-                </span>
-              )}
-              {websiteType && websiteType !== "GENERAL_WEBSITE" && (
-                <span className="inline-flex items-center gap-1.5 h-[26px] px-2.5 rounded-[4px] text-xs font-semibold bg-zinc-100 text-zinc-700 border border-zinc-200">
+            </div>
+
+            {/* Platform / Website Type Badge Below Title */}
+            {websiteType && websiteType !== "GENERAL_WEBSITE" && (
+              <div className="mt-2 flex items-center">
+                <span className="inline-flex items-center h-[26px] px-2.5 rounded-[4px] text-xs font-semibold bg-zinc-100 text-zinc-700 border border-zinc-200 uppercase tracking-wide">
                   {websiteType.replace(/_/g, " ")}
                 </span>
-              )}
-            </div>
+              </div>
+            )}
 
             <p className="text-[16px] text-zinc-600 mt-2 leading-relaxed">
               {report.summary}
@@ -314,32 +317,31 @@ export function AuditReportView({
               <div className="flex flex-col">
                 <span className="text-xs uppercase font-semibold text-zinc-400 mb-0.5">Est. Revenue Leakage</span>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl sm:text-4xl font-bold text-rose-500">{report.estimatedRevenueLoss}</span>
+                  <span className="text-3xl sm:text-4xl font-bold text-rose-500">{formatRevenueLossPercentage(report.estimatedRevenueLoss)}</span>
                   <span className="inline-flex items-center h-[24px] px-2.5 rounded-[4px] text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 whitespace-nowrap">Conversion Loss</span>
                 </div>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <a
-                href={`/api/audit/${report.id}/export`}
-                download
-                className="inline-flex items-center justify-center gap-2 h-[48px] px-5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors cursor-pointer whitespace-nowrap shadow-none"
+              <button
+                type="button"
+                onClick={async () => {
+                  if (isDownloading) return;
+                  setIsDownloading(true);
+                  await downloadAuditExcel(report.id, report.websiteUrl);
+                  setIsDownloading(false);
+                }}
+                disabled={isDownloading}
+                className="inline-flex items-center justify-center gap-2 h-[48px] px-5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors cursor-pointer whitespace-nowrap shadow-none disabled:opacity-60"
               >
-                <Download className="w-4 h-4" />
-                Download Excel Report
-              </a>
-
-              {showReanalyze && onReanalyze && (
-                <button
-                  onClick={() => onReanalyze(report.integrationId)}
-                  disabled={isAnalyzing}
-                  className="inline-flex items-center justify-center gap-2 h-[48px] px-4 bg-zinc-100 text-zinc-700 rounded-lg text-sm font-medium hover:bg-zinc-200 transition-colors cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isAnalyzing ? "animate-spin" : ""}`} />
-                  {isAnalyzing ? "Analyzing..." : "Re-Analyze"}
-                </button>
-              )}
+                {isDownloading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                <span>{isDownloading ? "Downloading..." : "Download Excel Report"}</span>
+              </button>
             </div>
           </div>
         </div>

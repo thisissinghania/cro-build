@@ -69,6 +69,12 @@ export async function searchGlobalAction(query: string): Promise<{ success: bool
           { summary: { contains: trimmed, mode: "insensitive" } },
         ],
       },
+      select: {
+        id: true,
+        websiteUrl: true,
+        overallScore: true,
+        estimatedRevenueLoss: true,
+      },
       take: 4,
       orderBy: { createdAt: "desc" },
     });
@@ -112,6 +118,6 @@ export async function searchGlobalAction(query: string): Promise<{ success: bool
     };
   } catch (error: any) {
     console.error("searchGlobalAction error:", error);
-    return { success: false, data: { websites: [], audits: [], pages: [] }, error: "Search failed" };
+    return { success: false, data: { websites: [], audits: [], pages: [] }, error: "Unable to perform search at this moment." };
   }
 }
